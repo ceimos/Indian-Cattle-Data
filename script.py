@@ -101,21 +101,37 @@ for breed, value in cattle_breeds_dict.items():
     soup = bs(response.content,'html.parser')
     table = soup.find('table')
     rows = table.find_all('tr')
-    morphology_data = []
-    for row in rows[:3]:
+    morphology_data = {
+        "Colour":None,
+        "Horn shape and size":None,
+        "Visible characteristics":None,
+        "Height (avg. cm.)":None,
+        "Body Length (avg. cm.)":None,
+        "Heart girth (avg. cm.)":None,
+        "Body weight (avg. kg.)":None,
+        "Birth weight (avg. kg.)":None
+    }
+    for row in rows[1:3]:
         tds = row.find_all('td')
-        morphology_data.append(tds[1].text.strip().replace(","," "))
+        key = tds[0].text.strip()
+        if key in morphology_data.keys():
+            morphology_data[key]=tds[1].text.strip().replace(","," ")
     
     for row in rows[5:]:
         tds = row.find_all('td')
-        morphology_stats = {}
-        morphology_stats['male']=float(tds[1].text.strip())
-        morphology_stats['female']=float(tds[2].text.strip())
-        morphology_data.append(json.dumps(morphology_stats))
-    print(morphology_data)
-    
+        key = tds[0].text.strip()
+        if key in morphology_data:
+            morphology_stats = {}
+            try:
+                morphology_stats['male']=float(tds[1].text.strip())
+                morphology_stats['female']=float(tds[2].text.strip())
+            except:
+                morphology_stats['male']=0
+                morphology_stats['female']=0
+            morphology_data[key]= json.dumps(morphology_stats)
+
     """ Performance """
-    response = requests.get(url+"performance.php?br="+'343')
+    response = requests.get(url+"performance.php?br="+value)
     soup = bs(response.content,'html.parser')
     table = soup.find('table')
     rows = table.find_all('tr')
@@ -150,12 +166,14 @@ for breed, value in cattle_breeds_dict.items():
             general_info_data["Mobility"],
             general_info_data["Feeding of adults"],
             general_info_data["Comments on Management"],
-            morphology_data[1],  # Colour
-            morphology_data[2],  # Horn shape and size
-            morphology_data[3],  # Visible characteristics
-            morphology_data[-3],  # Height (avg. cm.)
-            morphology_data[-2],  # Body Length (avg. cm.)
-            morphology_data[-1],  # Heart girth (avg. cm.)
+            morphology_data["Colour"],  # Colour
+            morphology_data["Horn shape and size"],  # Horn shape and size
+            morphology_data["Visible characteristics"],  # Visible characteristics
+            morphology_data["Height (avg. cm.)"],  # Height (avg. cm.)
+            morphology_data["Body Length (avg. cm.)"],  # Body Length (avg. cm.)
+            morphology_data["Heart girth (avg. cm.)"],  # Heart girth (avg. cm.)
+            morphology_data["Body weight (avg. kg.)"],
+            morphology_data["Birth weight (avg. kg.)"],
             performance_data["Litter size born"],
             performance_data["Age at first parturition (months)"],
             performance_data["Parturition interval (months)"],
@@ -164,7 +182,4 @@ for breed, value in cattle_breeds_dict.items():
             performance_data["Any Peculiarity of the breed"]
         ]
     )
-    break 
-
-    
 csv_file.close()
