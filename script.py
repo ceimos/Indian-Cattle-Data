@@ -71,41 +71,49 @@ for breed, value in cattle_breeds_dict.items():
     rows = table.find_all('tr')
     general_info_rows = rows[1:6]
     management_rows = rows[-4:]
-    general_info_data=""
+    general_info_data = {
+        "Synonyms": None,
+        "Origin": None,
+        "Major utility": None,
+        "Comments on utility": None,
+        "Comments on breeding tract": None,
+        "Adaptability to environment": None,
+        "Management system": None,
+        "Mobility": None,
+        "Feeding of adults": None,
+        "Comments on Management": None
+    }
     for row in general_info_rows:
         td = row.find_all('td')
-        data = td[1].text.strip()
-        synonyms = {"synonyms":""}
-        if td[0].text.strip() == "Synonyms" :
-            data="""{"synonyms":""" +data+ """} """
-        elif data == "":
-            data = "None"
-        else :
-            data.replace(","," ") #removes any commas are there in the description.
-        general_info_data = general_info_data + ","+data
-    general_info_data=general_info_data.split(',')
+        key = td[0].text.strip()
+        if key in general_info_data.keys():
+            general_info_data[key]= td[1].text.strip().replace(","," ")
+    
+    for row in management_rows:
+        td=row.find_all('td')
+        key=td[0].text.strip()
+        if key in general_info_data.keys():
+            general_info_data[key]= td[1].text.strip().replace(","," ")
+        
 
     """ Morphology """
     response = requests.get(url+"morphology.php?br="+value)
     soup = bs(response.content,'html.parser')
     table = soup.find('table')
     rows = table.find_all('tr')
-    morphology_data = ","
+    morphology_data = []
     for row in rows[:3]:
         tds = row.find_all('td')
-        morphology_data = morphology_data+ "," + tds[1].text.strip().replace(","," ")
+        morphology_data.append(tds[1].text.strip().replace(","," "))
     
-    morphology_data = morphology_data.split(',')
-
     for row in rows[5:]:
         tds = row.find_all('td')
         morphology_stats = {}
         morphology_stats['male']=float(tds[1].text.strip())
         morphology_stats['female']=float(tds[2].text.strip())
-        morphology_data += "," + json.dumps(morphology_stats)
+        morphology_data.append(json.dumps(morphology_stats))
+    print(morphology_data)
     
-
-
     """ Performance """
     response = requests.get(url+"performance.php?br="+'343')
     soup = bs(response.content,'html.parser')
@@ -130,9 +138,24 @@ for breed, value in cattle_breeds_dict.items():
     
     csv_writer.writerow(
         [
-            value, breed, state,",".join(places), longitude, latitude,
-            json.dumps(population_data), general_info_data,
-            morphology_data,
+            value, breed, state, ",".join(places), longitude, latitude,
+            json.dumps(population_data), 
+            general_info_data["Synonyms"],
+            general_info_data["Origin"],
+            general_info_data["Major utility"],
+            general_info_data["Comments on utility"],
+            general_info_data["Comments on breeding tract"],
+            general_info_data["Adaptability to environment"],
+            general_info_data["Management system"],
+            general_info_data["Mobility"],
+            general_info_data["Feeding of adults"],
+            general_info_data["Comments on Management"],
+            morphology_data[1],  # Colour
+            morphology_data[2],  # Horn shape and size
+            morphology_data[3],  # Visible characteristics
+            morphology_data[-3],  # Height (avg. cm.)
+            morphology_data[-2],  # Body Length (avg. cm.)
+            morphology_data[-1],  # Heart girth (avg. cm.)
             performance_data["Litter size born"],
             performance_data["Age at first parturition (months)"],
             performance_data["Parturition interval (months)"],
