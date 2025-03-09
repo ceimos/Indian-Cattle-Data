@@ -11,7 +11,7 @@ cattle_breeds = soup.find('select',{'id':'breeds'}).find_all('option')
 cattle_breeds_dict = { option.text.strip():option['value'] for option in cattle_breeds }
 
 """ CSV file Write"""
-csv_file = open("data.csv","+a")
+csv_file = open("data.csv","+a",newline='',encoding='utf-8')
 csv_writer = csv.writer(csv_file)
 headers = ["Id", "Breed", "State", "Places", "Longitude", "Latitude",
            "Population","Synonyms","Origin","Major utility","Comments on utility",
@@ -27,7 +27,9 @@ csv_writer.writerow(headers)
 
 """ Fetch and Process Data for each Breed at a time """
 for breed, value in cattle_breeds_dict.items():
-
+    
+    print(f"Downloading Data for {breed}", end="")
+    
     """ IMAGES """
     # name format == value_breed_gender
     # value is <option> attribute, let's call it 'id'
@@ -51,10 +53,20 @@ for breed, value in cattle_breeds_dict.items():
     soup = bs(response.content,'html.parser')
     table = soup.find('table')
     rows = table.find_all('tr')
-    state = rows[0].find_all('td')[0].text.strip().split(':')[1].strip()
-    places = [row.find_all('td')[1].text.strip() for row in rows[0:-3]]
-    longitude = rows[-2].find_all('td')[1].text.strip()
-    latitude = rows[-1].find_all('td')[1].text.strip()
+    state = None
+    places = None
+    longitude = None
+    latitude = None
+
+    if "State:" in rows[0].find_all('td')[0].text.strip():
+        state = rows[0].find_all('td')[0].text.strip().split(':')[1].strip()
+        places = [row.find_all('td')[1].text.strip() for row in rows[0:-3]]
+    if  rows[-2].find_all('td')[1].text.strip() :
+        longitude = rows[-2].find_all('td')[1].text.strip()
+        latitude = rows[-1].find_all('td')[1].text.strip()
+
+    places = ",".join(places) if places is not None else None
+
     
     """ POPULATION """
     response = requests.get(url+"population.php?breed="+value)
@@ -154,7 +166,7 @@ for breed, value in cattle_breeds_dict.items():
     
     csv_writer.writerow(
         [
-            value, breed, state, ",".join(places), longitude, latitude,
+            value, breed, state, places, longitude, latitude,
             json.dumps(population_data), 
             general_info_data["Synonyms"],
             general_info_data["Origin"],
@@ -182,4 +194,5 @@ for breed, value in cattle_breeds_dict.items():
             performance_data["Any Peculiarity of the breed"]
         ]
     )
+    print(".... Finished")
 csv_file.close()
